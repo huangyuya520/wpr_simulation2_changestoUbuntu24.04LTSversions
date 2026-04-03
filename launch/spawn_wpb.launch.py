@@ -10,6 +10,13 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     return LaunchDescription(
         [
+            DeclareLaunchArgument(
+                "model_file",
+                default_value=PathJoinSubstitution(
+                    [FindPackageShare("wpr_simulation2"), "models", "wpb_home.model"]
+                ),
+            ),
+            DeclareLaunchArgument("entity_name", default_value="wpb_home"),
             DeclareLaunchArgument("pose_x", default_value="0.0"),
             DeclareLaunchArgument("pose_y", default_value="0.0"),
             DeclareLaunchArgument("pose_theta", default_value="0.0"),
@@ -19,11 +26,13 @@ def generate_launch_description():
                         [
                             FindPackageShare("wpr_simulation2"),
                             "launch",
-                            "spawn_wpb_lidar.launch.py",
+                            "spawn_wpb_mobile.launch.py",
                         ]
                     )
                 ),
                 launch_arguments={
+                    "model_file": LaunchConfiguration("model_file"),
+                    "entity_name": LaunchConfiguration("entity_name"),
                     "pose_x": LaunchConfiguration("pose_x"),
                     "pose_y": LaunchConfiguration("pose_y"),
                     "pose_theta": LaunchConfiguration("pose_theta"),

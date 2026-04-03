@@ -225,35 +225,11 @@
     <child link="kinect2_rgb_optical_frame" />
 </joint>
 
-<!-- Gazebo plugin for mobile base -->
-<gazebo>
-  <plugin name="base_controller" filename="libgazebo_ros_planar_move.so">
-    <ros>
-      <!-- <namespace>/wpb</namespace> -->
-      <remapping>cmd_vel:=cmd_vel</remapping>
-      <remapping>odom:=odom</remapping>
-    </ros>
-    <!-- Set control loop update rate -->
-    <update_rate>100</update_rate>
-    <!-- Set odom publish rate -->
-    <publish_rate>20</publish_rate>
-    <!-- Set if odom required -->
-    <publish_odom>true</publish_odom>
-    <publish_odom_tf>true</publish_odom_tf>
-    <!-- Frame IDs -->
-    <odometry_frame>odom</odometry_frame>
-    <robot_base_frame>base_footprint</robot_base_frame>
-    <!-- Set odom covariance -->
-    <covariance_x>0.0001</covariance_x>
-    <covariance_y>0.0001</covariance_y>
-    <covariance_yaw>0.01</covariance_yaw>
-  </plugin>
-</gazebo> 
-
 <!-- Gazebo plugin for RpLidar A2 -->
-<!-- <gazebo reference="laser">
-  <sensor type="ray" name="rplidar_sensor">
+<gazebo reference="laser">
+  <sensor type="gpu_lidar" name="rplidar_sensor">
     <pose>0 0 0.06 0 0 0</pose>
+    <topic>/scan</topic>
     <visualize>true</visualize>
     <update_rate>10</update_rate>
     <ray>
@@ -276,16 +252,13 @@
         <stddev>0.01</stddev>
       </noise>
     </ray>
-    <plugin name="rplidar_ros_controller" filename="libgazebo_ros_laser.so">
-      <topicName>scan</topicName>
-      <frameName>laser</frameName>
-    </plugin>
   </sensor>
-</gazebo> -->
+</gazebo>
 
 <!-- Gazebo plugin for Kinect v2 -->
 <gazebo reference="kinect2_head_frame">
-  <sensor type="depth" name="kinect2_depth_sensor" >
+  <sensor type="rgbd_camera" name="kinect2_depth_sensor" >
+    <topic>/kinect2/sd</topic>
     <always_on>true</always_on>
     <update_rate>10.0</update_rate>
     <camera name="kinect2_depth_sensor">
@@ -305,25 +278,11 @@
           <stddev>0.07</stddev>
       </noise>
     </camera>
-    <plugin name="kinect2_depth_control" filename="libgazebo_ros_camera.so">
-        <ros>
-          <namespace>kinect2</namespace>
-          <remapping>custom_camera/image_raw:=image_color_rect</remapping>
-          <remapping>custom_camera/image_depth:=image_depth_rect</remapping>
-          <remapping>custom_camera/camera_info:=camera_info</remapping>
-          <remapping>custom_camera/camera_info_depth:=/depth_camera_info</remapping>
-          <remapping>custom_camera/points:=points</remapping>
-        </ros>
-        <camera_name>sd</camera_name>
-        <frame_name>kinect2_ir_optical_frame</frame_name>
-        <hack_baseline>0.1</hack_baseline>
-        <min_depth>0.001</min_depth>
-        <max_depth>300.0</max_depth>
-    </plugin>
   </sensor>
 </gazebo>
 <gazebo reference="kinect2_rgb_optical_frame">
     <sensor type="camera" name="kinect2_rgb_sensor">
+        <topic>/kinect2/hd/image_raw</topic>
         <always_on>true</always_on>
         <update_rate>20.0</update_rate>
         <camera name="hd">
@@ -343,22 +302,12 @@
               <stddev>0.007</stddev>
           </noise>
         </camera>
-        <plugin name="kinect2_rgb_controller" filename="libgazebo_ros_camera.so">
-          <ros>
-            <namespace>kinect2</namespace>
-            <remapping>image_raw:=image_color_rect</remapping>
-            <remapping>camera_info:=camera_info</remapping>
-          </ros>
-          <camera_name>hd</camera_name>
-          <frame_name>kinect2_rgb_optical_frame</frame_name>
-
-          <hack_baseline>0.1</hack_baseline>
-        </plugin>
     </sensor>
 </gazebo>
 
 <gazebo reference="kinect2_head_frame">
     <sensor type="camera" name="kinect2_qhd_rgb_sensor">
+        <topic>/kinect2/qhd/image_raw</topic>
         <always_on>true</always_on>
         <update_rate>20.0</update_rate>
         <camera name="qhd">
@@ -373,17 +322,6 @@
               <far>10.0</far>
           </clip>
         </camera>
-        <plugin name="kinect2_qhd_rgb_controller" filename="libgazebo_ros_camera.so">
-          <ros>
-            <namespace>kinect2</namespace>
-            <remapping>image_raw:=image_color_rect</remapping>
-            <remapping>camera_info:=camera_info</remapping>
-          </ros>
-          <camera_name>qhd</camera_name>
-          <frame_name>kinect2_head_frame</frame_name>
-
-          <hack_baseline>0.1</hack_baseline>
-        </plugin>
     </sensor>
 </gazebo>
 
@@ -391,19 +329,10 @@
 <gazebo reference="body_link">
   <gravity>true</gravity>
   <sensor name="imu_sensor" type="imu">
+    <topic>/imu/data</topic>
     <always_on>true</always_on>
     <update_rate>100</update_rate>
     <visualize>true</visualize>
-    <topic>__default_topic__</topic>
-    <plugin filename="libgazebo_ros_imu_sensor.so" name="imu_plugin">
-      <topicName>imu/data</topicName>
-      <bodyName>body_link</bodyName>
-      <updateRateHZ>100.0</updateRateHZ>
-      <gaussianNoise>0.0</gaussianNoise>
-      <xyzOffset>0 0 0</xyzOffset>
-      <rpyOffset>0 0 0</rpyOffset>
-      <frameName>imu_link</frameName>
-    </plugin>
     <pose>0 0 0 0 0 0</pose>
   </sensor>
 </gazebo>

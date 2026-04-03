@@ -5,7 +5,6 @@
   <version>1.0.0</version>
   <description>the simulators for robots of 6-robot</description>
   <maintainer email="zhangwanjie@126.com">robot</maintainer>
-  <url type="website">http://www.6-robot.com</url>
   <license>GPLv3</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
@@ -52,7 +51,7 @@
   <test_depend>ament_lint_common</test_depend>
 
   <export>
-    <gazebo_ros gazebo_model_path="${prefix}/../" gazebo_media_path="${prefix}/../"/>
+    <gazebo_ros gazebo_model_path="${prefix}/../" gazebo_media_path="${prefix}/../"></gazebo_ros>
     <build_type>ament_cmake</build_type>
   </export>
 </package>

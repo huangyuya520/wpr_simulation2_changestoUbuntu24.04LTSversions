@@ -64,9 +64,8 @@ ros2 launch wpr_simulation2 wpb_table.launch.py
 ```
 
 Jazzy 当前限制:
-- `spawn_wpb.launch.py`、`spawn_wpb_lidar.launch.py`、`spawn_wpb_head_up.launch.py` 目前是兼容性包装入口，底层统一复用已迁移的 `wpb_home_mani` 模型。
 - 原 Gazebo Classic 抓取修正类插件还没有完整迁移到新 Gazebo 系统插件。
-- 如果直接使用还未迁移的历史 `.model` 文件，仍可能遇到 `libgazebo_ros_*` 相关错误。
+- `wpv3.model`、`wpr1.model` 等更早期的历史模型文件还没有迁移到 `gz_sim`，如果直接使用它们，仍可能遇到 `libgazebo_ros_*` 相关错误。
 - `map_tools.launch.py`、`navigation.launch.py`、`wpb_scene_1.launch.py` 还依赖 `nav2_bringup`，其中 `map_tools.launch.py` 和 `wpb_scene_1.launch.py` 还额外需要工作区中存在 `wp_map_tools` 包。
 
 SLAM环境地图创建:
