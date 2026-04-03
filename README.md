@@ -13,6 +13,14 @@ Youtube: [机器人操作系统 ROS2 入门教材](https://www.youtube.com/watch
 
 - ROS2 Humble (Ubuntu 22.04)
 
+## 兼容性说明
+
+- 当前仓库按 Gazebo Classic 编写，直接依赖 `gazebo_ros_pkgs`、`gazebo_ros`、`gazebo_ros2_control`。
+- Ubuntu 24.04 + ROS2 Jazzy 默认使用的是新 Gazebo 技术栈，因此不能直接执行 `install_for_humble.sh` 来安装这些经典 Gazebo 依赖。
+- 如果你使用的是 Ubuntu 24.04 + ROS2 Jazzy，需要二选一：
+  1. 切换到 Ubuntu 22.04 + ROS2 Humble 后按本文步骤运行。
+  2. 将本仓库迁移到 `gz_sim` / `ros_gz` / `gz_ros2_control` 后再在 Jazzy 下编译。
+
 ## 使用说明
 
 ### 一、 启智ROS机器人
