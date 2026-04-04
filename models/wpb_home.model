@@ -381,4 +381,9 @@
   </sensor>
 </gazebo>
 
+<gazebo>
+  <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu">
+  </plugin>
+</gazebo>
+
 </robot>
