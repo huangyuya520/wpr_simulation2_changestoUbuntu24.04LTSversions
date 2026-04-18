@@ -6,6 +6,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+from ros_gz_bridge.actions import RosGzBridge
 
 
 def generate_launch_description():
@@ -27,6 +28,22 @@ def generate_launch_description():
         output="screen",
     )
 
+    set_pose_bridge = RosGzBridge(
+        bridge_name="gazebo_service_bridge",
+        extra_bridge_params={
+            "bridges": {
+                "set_pose_bridge": {
+                    "service_name": "/world/default/set_pose",
+                    "ros_type_name": "ros_gz_interfaces/srv/SetEntityPose",
+                    "gz_req_type_name": "gz.msgs.Pose",
+                    "gz_rep_type_name": "gz.msgs.Boolean",
+                }
+            },
+            "bridge_names": ["set_pose_bridge"],
+        },
+        log_level="info",
+    )
+
     return LaunchDescription(
         [
             DeclareLaunchArgument(
@@ -38,5 +55,6 @@ def generate_launch_description():
             ),
             gz_sim,
             clock_bridge,
+            set_pose_bridge,
         ]
     )

@@ -257,6 +257,7 @@ install(PROGRAMS
   src/face_detector.py
   src/ensure_controller_active.py
   src/gz_planar_move.py
+  src/sensor_frame_normalizer.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

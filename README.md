@@ -101,9 +101,37 @@ Jazzy 当前限制:
 SLAM环境地图创建:
 ```
 ros2 launch wpr_simulation2 slam.launch.py 
-ros2 run rqt_robot_steering rqt_robot_steering 
+ros2 run wpr_simulation2 keyboard_vel_cmd
 ```
 ![wpb_gmapping pic](./media/wpb_gmapping.png)
+
+保存地图前，请确认系统已经安装 `nav2_map_server`:
+```
+sudo apt-get install ros-jazzy-nav2-map-server
+```
+
+地图保存命令里的包名必须写成带下划线的 `nav2_map_server`，不能写成带空格的 `nav2 map server`:
+```
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+ros2 run nav2_map_server map_saver_cli -f map --ros-args -p save_map_timeout:=10.0 -p map_subscribe_transient_local:=true
+```
+
+执行成功后，当前目录下会生成 `map.yaml` 和 `map.pgm` 两个文件。
+如果仍然失败，先确认 RViz 中 `Map` 已经不再是 `Warn`，或者先让机器人继续移动几秒，确保 `/map` 已经真正发布出来。
+
+如果本机没有安装 `rqt_robot_steering`，优先使用工作区自带的键盘控制节点:
+```
+source install/setup.bash
+ros2 run wpr_simulation2 keyboard_vel_cmd
+```
+
+也可以使用系统里常见的备用控制节点:
+```
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+```
 
 Navigation导航:
 ```

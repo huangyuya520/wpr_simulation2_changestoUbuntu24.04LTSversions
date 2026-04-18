@@ -62,7 +62,21 @@ def generate_launch_description():
             "/kinect2/qhd/image_raw@sensor_msgs/msg/Image[gz.msgs.Image",
             "/kinect2/sd/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked",
         ],
+        remappings=[
+            ("/scan", "/scan_bridge"),
+            ("/imu/data", "/imu/data_bridge"),
+            ("/kinect2/qhd/image_raw", "/kinect2/qhd/image_raw_bridge"),
+            ("/kinect2/sd/points", "/kinect2/sd/points_bridge"),
+        ],
         output="screen",
+    )
+
+    sensor_frame_normalizer = Node(
+        package="wpr_simulation2",
+        executable="sensor_frame_normalizer.py",
+        name="sensor_frame_normalizer",
+        output="screen",
+        parameters=[{"use_sim_time": True}],
     )
 
     spawn_robot = Node(
@@ -90,6 +104,7 @@ def generate_launch_description():
         output="screen",
         parameters=[
             {
+                "use_sim_time": True,
                 "entity_name": entity_name,
                 "world_name": "default",
                 "initial_x": pose_x,
@@ -120,6 +135,7 @@ def generate_launch_description():
                 )
             ),
             bridge,
+            sensor_frame_normalizer,
             robot_state_publisher,
             # Give Gazebo a short warm-up window so model creation doesn't race the world startup.
             TimerAction(period=spawn_delay, actions=[spawn_robot]),

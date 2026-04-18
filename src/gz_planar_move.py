@@ -58,18 +58,33 @@ class GzPlanarMove(Node):
         self.last_cmd_time = self.get_clock().now()
         self.last_update_time = self.get_clock().now()
         self.pending_request = None
+        self.service_name = f"/world/{self.world_name}/set_pose"
+        self.service_wait_log_period = Duration(seconds=2.0)
+        self.last_service_wait_log_time = self.get_clock().now()
+        self.received_motion_command = False
+        self.pose_service_ready_logged = False
+        self.pose_command_success_logged = False
 
         self.odom_pub = self.create_publisher(Odometry, self.odom_topic, 10)
         self.create_subscription(Twist, self.cmd_vel_topic, self.on_cmd_vel, 10)
         self.tf_broadcaster = TransformBroadcaster(self)
 
-        service_name = f"/world/{self.world_name}/set_pose"
-        self.set_pose_client = self.create_client(SetEntityPose, service_name)
+        self.set_pose_client = self.create_client(SetEntityPose, self.service_name)
         self.create_timer(1.0 / self.update_rate, self.on_timer)
+        self.get_logger().info(
+            "Planar move bridge ready for entity "
+            f"'{self.entity_name}' on '{self.cmd_vel_topic}', "
+            f"driving Gazebo service '{self.service_name}'."
+        )
 
     def on_cmd_vel(self, msg: Twist) -> None:
         self.cmd_vel = msg
         self.last_cmd_time = self.get_clock().now()
+        if not self.received_motion_command and self._is_motion_command(msg):
+            self.received_motion_command = True
+            self.get_logger().info(
+                "Received first non-zero /cmd_vel command; planar movement is armed."
+            )
 
     def on_timer(self) -> None:
         now = self.get_clock().now()
@@ -82,38 +97,78 @@ class GzPlanarMove(Node):
         if now - self.last_cmd_time <= self.cmd_vel_timeout:
             cmd = self.cmd_vel
 
+        if self.pending_request is not None and not self.pending_request.done():
+            self.publish_odom_message(now, cmd)
+            return
+
         cos_yaw = math.cos(self.yaw)
         sin_yaw = math.sin(self.yaw)
         world_vx = cmd.linear.x * cos_yaw - cmd.linear.y * sin_yaw
         world_vy = cmd.linear.x * sin_yaw + cmd.linear.y * cos_yaw
 
-        self.x += world_vx * dt
-        self.y += world_vy * dt
-        self.yaw += cmd.angular.z * dt
+        next_x = self.x + world_vx * dt
+        next_y = self.y + world_vy * dt
+        next_yaw = self.yaw + cmd.angular.z * dt
 
-        self.send_pose_request()
+        if self.send_pose_request(next_x, next_y, next_yaw, now, cmd):
+            self.x = next_x
+            self.y = next_y
+            self.yaw = next_yaw
         self.publish_odom_message(now, cmd)
 
-    def send_pose_request(self) -> None:
+    def send_pose_request(
+        self, next_x: float, next_y: float, next_yaw: float, now, cmd: Twist
+    ) -> bool:
         if not self.set_pose_client.service_is_ready():
-            return
+            if self._is_motion_command(cmd) and now - self.last_service_wait_log_time >= self.service_wait_log_period:
+                self.get_logger().warning(
+                    "Gazebo set_pose service is not ready yet. "
+                    f"Expected service: '{self.service_name}'."
+                )
+                self.last_service_wait_log_time = now
+            return False
 
-        if self.pending_request is not None and not self.pending_request.done():
-            return
+        if not self.pose_service_ready_logged:
+            self.pose_service_ready_logged = True
+            self.get_logger().info(
+                f"Connected to Gazebo pose service '{self.service_name}'."
+            )
 
         request = SetEntityPose.Request()
         request.entity = Entity(name=self.entity_name, type=Entity.MODEL)
-        request.pose.position.x = self.x
-        request.pose.position.y = self.y
+        request.pose.position.x = next_x
+        request.pose.position.y = next_y
         request.pose.position.z = self.z
         (
             request.pose.orientation.x,
             request.pose.orientation.y,
             request.pose.orientation.z,
             request.pose.orientation.w,
-        ) = quaternion_from_yaw(self.yaw)
+        ) = quaternion_from_yaw(next_yaw)
 
         self.pending_request = self.set_pose_client.call_async(request)
+        self.pending_request.add_done_callback(self.on_set_pose_response)
+        return True
+
+    def on_set_pose_response(self, future) -> None:
+        self.pending_request = None
+        try:
+            response = future.result()
+        except Exception as exc:  # pragma: no cover - runtime safeguard
+            self.get_logger().warning(f"Gazebo set_pose request raised an exception: {exc}")
+            return
+
+        if not response.success:
+            self.get_logger().warning(
+                f"Gazebo rejected a set_pose request for entity '{self.entity_name}'."
+            )
+            return
+
+        if not self.pose_command_success_logged:
+            self.pose_command_success_logged = True
+            self.get_logger().info(
+                f"Gazebo confirmed pose updates for entity '{self.entity_name}'."
+            )
 
     def publish_odom_message(self, now, cmd: Twist) -> None:
         quat = quaternion_from_yaw(self.yaw)
@@ -148,6 +203,20 @@ class GzPlanarMove(Node):
         transform.transform.rotation.z = quat[2]
         transform.transform.rotation.w = quat[3]
         self.tf_broadcaster.sendTransform(transform)
+
+    @staticmethod
+    def _is_motion_command(cmd: Twist) -> bool:
+        return any(
+            abs(value) > 1e-6
+            for value in (
+                cmd.linear.x,
+                cmd.linear.y,
+                cmd.linear.z,
+                cmd.angular.x,
+                cmd.angular.y,
+                cmd.angular.z,
+            )
+        )
 
 
 def main(args=None) -> None:
