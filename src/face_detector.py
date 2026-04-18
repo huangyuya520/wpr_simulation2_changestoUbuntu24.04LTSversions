@@ -1,52 +1,81 @@
 #!/usr/bin/env python3
 
+from pathlib import Path
 import rclpy
 import sys
 import cv2
-import face_recognition
-import numpy as np
 from rclpy.node import Node
-from cv_bridge import CvBridge, CvBridgeError
+from cv_bridge import CvBridge
 
-from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import RegionOfInterest
 
+
+def resolve_haar_cascade_path() -> str:
+    candidates = [
+        Path("/usr/share/opencv4/haarcascades/haarcascade_frontalface_default.xml"),
+        Path("/usr/share/opencv/haarcascades/haarcascade_frontalface_default.xml"),
+        Path("/usr/local/share/opencv4/haarcascades/haarcascade_frontalface_default.xml"),
+    ]
+
+    for candidate in candidates:
+        if candidate.is_file():
+            return str(candidate)
+
+    raise FileNotFoundError(
+        "Could not find haarcascade_frontalface_default.xml in the standard OpenCV locations."
+    )
+
+
 class FaceDetector(Node):
     def __init__(self):
-        super().__init__('face_detector')
-        self.pub = self.create_publisher(RegionOfInterest, '/face_position', 10)
-        self.sub = self.create_subscription(Image, "/face_detector_input", self.detect_faces_callback, 10)
+        super().__init__("face_detector")
+        self.pub = self.create_publisher(RegionOfInterest, "/face_position", 10)
+        self.sub = self.create_subscription(
+            Image, "/face_detector_input", self.detect_faces_callback, 10
+        )
         self.bridge = CvBridge()
+        self.face_detector = cv2.CascadeClassifier(resolve_haar_cascade_path())
+        if self.face_detector.empty():
+            raise RuntimeError("Failed to load OpenCV frontal-face Haar cascade.")
+        self.frame_count = 0
+        self.face_count = 0
+        self.get_logger().info("OpenCV Haar face detector is ready.")
 
-    # 视频流处理回调函数
     def detect_faces_callback(self, data):
         frame = self.bridge.imgmsg_to_cv2(data, "bgr8")
+        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray_frame = cv2.equalizeHist(gray_frame)
 
-        # 将OpenCV的BGR格式 转换到 face_recognition支持的RGB格式
-        rgb_frame = frame[:, :, ::-1]
-        
-        face_locations = []
-        # 在视频帧里检测人脸位置
-        face_locations = face_recognition.face_locations(rgb_frame)
-        num_faces = len(face_locations)
-        # self.get_logger().info("发现{}个人脸".format(num_faces))
+        faces = self.face_detector.detectMultiScale(
+            gray_frame,
+            scaleFactor=1.1,
+            minNeighbors=5,
+            minSize=(30, 30),
+        )
 
-        # 将人脸检测结果在原图框出来
-        for (top, right, bottom, left) in face_locations:
-            cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
+        self.frame_count += 1
+        if self.frame_count == 1:
+            self.get_logger().info(
+                f"Received first detector frame: {frame.shape[1]}x{frame.shape[0]}"
+            )
+
+        if len(faces) == 0:
+            self.get_logger().warn("当前帧未检测到人脸。")
+            return
+
+        self.face_count += len(faces)
+        self.get_logger().info(f"当前帧检测到 {len(faces)} 张人脸。")
+
+        for (x, y, w, h) in faces:
             roi_msg = RegionOfInterest()
-            roi_msg.x_offset = left
-            roi_msg.y_offset = top
-            roi_msg.width = right - left
-            roi_msg.height = bottom - top
+            roi_msg.x_offset = int(x)
+            roi_msg.y_offset = int(y)
+            roi_msg.width = int(w)
+            roi_msg.height = int(h)
             self.pub.publish(roi_msg)
 
-        # 显示结果图
-        # cv2.imshow('Faces', frame)
-        # cv2.waitKey(1)
 
-      
 def main(args):
     rclpy.init(args=args)
     face_detector_object = FaceDetector()
